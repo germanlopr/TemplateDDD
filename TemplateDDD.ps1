@@ -1,8 +1,8 @@
 ﻿Clear-Host
-
-Write-Host "===================================="
-Write-Host "=          Creación de proyecto DDD          ="
-Write-Host "===================================="
+Write-Host "===================================" -ForegroundColor DarkGray
+Write-Host "= Creación de proyecto DDD ="        -ForegroundColor Green
+Write-Host "===================================" -ForegroundColor DarkGray
+Write-Host ""
 
 $projectName = Read-Host "Ingrese el nombre del proyecto"
 $projectDirectory = Join-Path $PWD.Path $projectName
@@ -10,7 +10,7 @@ $projectDirectory = Join-Path $PWD.Path $projectName
 if (Test-Path $projectDirectory) {
     Write-Host "El directorio '$projectDirectory' ya existe. Saliendo del script."
     Pause
-    exit
+    Exit
 }
 
 New-Item -ItemType Directory -Path $projectDirectory | Out-Null
@@ -18,21 +18,24 @@ Set-Location $projectDirectory
 
 dotnet new sln
 
-$projects = @("Application", "Domain.Core", "SharedKernel.Repositories", "Domain.Entities", "Infraestructure.Data", "Service", "Testing")
+$projects = "Application", "Domain.Core", "SharedKernel.Repositories", "Domain.Entities", "Infraestructure.Data", "Service", "Testing"
 
 foreach ($project in $projects) {
     dotnet new classlib -o "$projectName.$project"
     dotnet sln add "$projectName.$project"
 }
 
-$uiType = Read-Host "Ingrese el tipo de UI (1 = MVC, 2 = Blazor)"
+Write-Host "Ingrese el tipo de UI:"
+Write-Host "1. MVC"
+Write-Host "2. Blazor"
+$uiType = Read-Host "Ingrese su elección (1 o 2)"
 
 switch ($uiType) {
-    1 {
+    '1' {
         dotnet new mvc -o "$projectName.UIWeb"
         dotnet sln add "$projectName.UIWeb"
     }
-    2 {
+    '2' {
         dotnet new blazorserver -o "$projectName.UIWeb"
         dotnet sln add "$projectName.UIWeb"
     }
@@ -50,103 +53,106 @@ Set-Location "$projectDirectory\$projectName.Infraestructure.Data"
 @"
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net7.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="6.0.16" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="6.0.16" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="7.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="7.0.0" />
   </ItemGroup>
 </Project>
-"@ | Out-File "$projectName.Infraestructure.Data.csproj" -Encoding UTF8
+"@ | Set-Content "$projectName.Infraestructure.Data.csproj"
 
 dotnet restore
 
 @"
+using System.Linq.Expressions;
 namespace $projectName.SharedKernel.Repositories
 {
-    public interface IRepositorio<T>
+    public interface IRepository<T>
     {
-        void Agregar(T entidad);
-        void Eliminar(int id);
-        void Actualizar(T entidad);
-        int Contar(Expression<Func<T, bool>> where);
-        T ObtenerPorId(int id);
-        IEnumerable<T> EncontrarPor(ParametrosDeQuery<T> parametrosDeQuery);
+        void Add(T entidad);
+        void Delete(int id);
+        void Update(T entidad);
+        int Count(Expression<Func<T, bool>> where);
+        T GetById(int id);
+        IEnumerable<T> FindBy(QueryParam<T> QueryParam);
     }
 }
-"@ | Out-File "$projectDirectory\$projectName.SharedKernel.Repositories\IRepositorio.cs" -Encoding UTF8
+"@ | Set-Content "..\$projectName.SharedKernel.Repositories\IRepository.cs"
 
 @"
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 
 namespace $projectName.SharedKernel.Repositories
 {
-    public class ParametrosDeQuery<T>
-    {
-        public ParametrosDeQuery(int pagina, int top)
-        {
-            Pagina = pagina;
-            Top = top;
-            Where = null;
-            OrderBy = null;
-            OrderByDescending = null;
-        }
+     public class QueryParam<T>
+     {
+         public QueryParam(int pag, int top)
+         {
+             Pag = pag;
+             Top = top;
+             Where = null;
+             OrderBy = null;
+             OrderByDescending = null;
+         }
 
-        public int Pagina { get; set; }
-        public int Top { get; set; }
-        public Expression<Func<T, bool>> Where { get; set; }
-        public Func<T, object> OrderBy { get; set; }
-        public Func<T, object> OrderByDescending { get; set; }
-    }
+         public int Pag { get; set; }
+         public int Top { get; set; }
+         public Expression<Func<T, bool>> Where { get; set; }
+         public Func<T, object> OrderBy { get; set; }
+         public Func<T, object> OrderByDescending { get; set; }
+     }
 }
-"@ | Out-File "$projectDirectory\$projectName.SharedKernel.Repositories\ParametrosDeQuery.cs" -Encoding UTF8
+"@ | Set-Content "..\$projectName.SharedKernel.Repositories\ParametrosDeQuery.cs"
 
 @"
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using System.IO;
 
 namespace $projectName.Infraestructure.Data
 {
-    public class ApplicationDbContext : DbContext
-    {
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-            : base(options)
-        {
-        }
+     public class ApplicationDbContext : DbContext
+     {
+         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+             : base(options)
+         {
+         }
 
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            if (!optionsBuilder.IsConfigured)
-            {
-                IConfigurationRoot configuration = new ConfigurationBuilder()
-                    .SetBasePath(Directory.GetCurrentDirectory())
-                    .AddJsonFile("appsettings.json")
-                    .Build();
-                var connectionString = configuration.GetConnectionString("DefaultConnection");
-                optionsBuilder.UseSqlServer(connectionString);
-            }
-        }
+         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+         {
+             if (!optionsBuilder.IsConfigured)
+             {
+                 IConfigurationRoot configuration = new ConfigurationBuilder()
+                     .SetBasePath(Directory.GetCurrentDirectory())
+                     .AddJsonFile("appsettings.json")
+                     .Build();
+                 var connectionString = configuration.GetConnectionString("DefaultConnection");
+                 optionsBuilder.UseSqlServer(connectionString);
+             }
+         }
 
-        // Agregar DbSet<Entidad> aquí
-    }
+         // Agregar DbSet<Entidad> aquí
+     }
 }
-"@ | Out-File "$projectDirectory\$projectName.Infraestructure.Data\ApplicationDbContext.cs" -Encoding UTF8
+"@ | Set-Content "..\$projectName.Infraestructure.Data\ApplicationDbContext.cs"
 
-Set-Location $projectDirectory
+Write-Host "=== Agregando referencias a proyectos ===="
 
-$projects = @("UIWeb", "Application", "Domain.Entities", "Service", "SharedKernel.Repositories", "Infraestructure.Data")
+dotnet add "..\$projectName.UIWeb" reference "..\$projectName.Application"
+dotnet add "..\$projectName.UIWeb" reference "..\$projectName.Domain.Entities"
+dotnet add "..\$projectName.UIWeb" reference "..\$projectName.Service"
 
-foreach ($project in $projects) {
-    foreach ($otherProject in $projects) {
-        if ($project -ne $otherProject) {
-            dotnet add "$projectName.$project" reference "$projectName.$otherProject"
-        }
-    }
-}
+dotnet add "..\$projectName.Application" reference "..\$projectName.Domain.Entities"
+dotnet add "..\$projectName.Application" reference "..\$projectName.Service"
+dotnet add "..\$projectName.Application" reference "..\$projectName.SharedKernel.Repositories"
+
+dotnet add "..\$projectName.SharedKernel.Repositories" reference "..\$projectName.Domain.Entities"
+dotnet add "..\$projectName.SharedKernel.Repositories" reference "..\$projectName.Service"
+dotnet add "..\$projectName.SharedKernel.Repositories" reference "..\$projectName.Infraestructure.Data"
+
+dotnet build
 
 Write-Host "Proceso completado exitosamente."
 Pause

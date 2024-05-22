@@ -68,40 +68,38 @@ echo ^</Project^>
 dotnet restore
 
 (
+echo using System.Linq.Expressions;
 echo namespace %projectName%.SharedKernel.Repositories
 echo {
-echo    public interface IRepositorio^<T^>
+echo    public interface IRepository^<T^>
 echo    {
-echo        void Agregar^(T entidad^);
-echo        void Eliminar^(int id^);
-echo         void Actualizar^(T entidad^);
-echo         int Contar^(Expression^<Func^<T, bool^>^> where^);
-echo        T ObtenerPorId^(int id^);
-echo        IEnumerable^<T^> EncontrarPor^(ParametrosDeQuery^<T^> parametrosDeQuery^);
+echo        void Add^(T entidad^);
+echo        void Delete^(int id^);
+echo        void Update^(T entidad^);
+echo        int Count^(Expression^<Func^<T, bool^>^> where^);
+echo        T GetById^(int id^);
+echo        IEnumerable^<T^> FindBy^(QueryParam^<T^> QueryParam^);
 echo    }
 echo }
-) > "..\%projectName%.SharedKernel.Repositories\IRepositorio.cs"
+) > "..\%projectName%.SharedKernel.Repositories\IRepository.cs"
 
 (
-echo using System;
-echo using System.Collections.Generic;
-echo using System.Linq;
 echo using System.Linq.Expressions;
 echo.
 echo namespace %projectName%.SharedKernel.Repositories
 echo {
-echo     public class ParametrosDeQuery^<T^>
+echo     public class QueryParam^<T^>
 echo     {
-echo         public ParametrosDeQuery^(int pagina, int top^)
+echo         public QueryParam^(int pag, int top^)
 echo         {
-echo             Pagina = pagina;
+echo             Pag = pag;
 echo             Top = top;
 echo             Where = null;
 echo             OrderBy = null;
 echo             OrderByDescending = null;
 echo         }
 echo.
-echo         public int Pagina { get; set; }
+echo         public int Pag { get; set; }
 echo         public int Top { get; set; }
 echo         public Expression^<Func^<T, bool^>^> Where { get; set; }
 echo         public Func^<T, object^> OrderBy { get; set; }
@@ -113,6 +111,7 @@ echo }
 (
 echo using Microsoft.EntityFrameworkCore;
 echo using Microsoft.Extensions.Configuration;
+echo using System.IO;
 echo.
 echo namespace %projectName%.Infraestructure.Data
 echo {
@@ -141,17 +140,34 @@ echo     }
 echo }
 ) > "..\%projectName%.Infraestructure.Data\ApplicationDbContext.cs"
 
-cd %nombreCarpeta%
+@REM cd %nombreCarpeta%
 
-set referencias=%projectName%.UIWeb %projectName%.Application %projectName%.Domain.Entities %projectName%.Service %projectName%.SharedKernel.Repositories %projectName%.Infraestructure.Data
+@REM set referencias=%projectName%.UIWeb %projectName%.Application %projectName%.Domain.Entities %projectName%.Service %projectName%.SharedKernel.Repositories %projectName%.Infraestructure.Data
 
-for %%r in (%referencias%) do (
-    for %%p in (%referencias%) do (
-        if not "%%r"=="%%p" (
-            dotnet add "%%r" reference "%%p"
-        )
-    )
-)
+@REM for %%r in (%referencias%) do (
+@REM     for %%p in (%referencias%) do (
+@REM         if not "%%r"=="%%p" (
+@REM             dotnet add "%%r" reference "%%p"
+@REM         )
+@REM     )
+@REM )
+
+
+echo === Agregando referencias a proyectos ====
+
+dotnet add ..\%projectName%.UIWeb reference ..\%projectName%.Application
+dotnet add ..\%projectName%.UIWeb reference ..\%projectName%.Domain.Entities
+dotnet add ..\%projectName%.UIWeb reference ..\%projectName%.Service
+
+dotnet add ..\%projectName%.Application reference ..\%projectName%.Domain.Entities
+dotnet add ..\%projectName%.Application reference ..\%projectName%.Service
+dotnet add ..\%projectName%.Application reference ..\%projectName%.SharedKernel.Repositories
+
+dotnet add ..\%projectName%.SharedKernel.Repositories reference ..\%projectName%.Domain.Entities
+dotnet add ..\%projectName%.SharedKernel.Repositories reference ..\%projectName%.Service
+dotnet add ..\%projectName%.SharedKernel.Repositories reference ..\%projectName%.Infraestructure.Data
+
+dotnet build
 
 echo Proceso completado exitosamente.
 pause
