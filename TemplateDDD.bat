@@ -17,14 +17,15 @@ if exist "%projectDirectory%" (
     exit
 )
 
-set nombreCarpeta=%projectDirectory%
-
 mkdir "%projectDirectory%"
-cd "%projectDirectory%"
+mkdir "%projectDirectory%\src"
+mkdir "%projectDirectory%\tests"
 
-dotnet new sln
+cd "%projectDirectory%\src"
 
-set projects=Application Domain.Core SharedKernel.Repositories Domain.Entities Infraestructure.Data Service Testing
+dotnet new sln --name %projectName%
+
+set projects=Domain Application Infrastructure
 
 for %%p in (%projects%) do (
     dotnet new classlib -o "%projectName%.%%p"
@@ -50,7 +51,7 @@ if "%uiType%" == "1" (
 
 dotnet build
 
-cd "%projectDirectory%\%projectName%.Infraestructure.Data"
+cd "%projectDirectory%\src\%projectName%.Infrastructure"
 
 (
 echo ^<Project Sdk="Microsoft.NET.Sdk"^>
@@ -63,57 +64,21 @@ echo     ^<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Ve
 echo     ^<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="7.0.0" /^>
 echo   ^</ItemGroup^>
 echo ^</Project^>
-) > "%projectName%.Infraestructure.Data.csproj"
+) > "%projectName%.Infrastructure.csproj"
 
 dotnet restore
 
-(
-echo using System.Linq.Expressions;
-echo namespace %projectName%.SharedKernel.Repositories
-echo {
-echo    public interface IRepository^<T^>
-echo    {
-echo        void Add^(T entidad^);
-echo        void Delete^(int id^);
-echo        void Update^(T entidad^);
-echo        int Count^(Expression^<Func^<T, bool^>^> where^);
-echo        T GetById^(int id^);
-echo        IEnumerable^<T^> FindBy^(QueryParam^<T^> QueryParam^);
-echo    }
-echo }
-) > "..\%projectName%.SharedKernel.Repositories\IRepository.cs"
-
-(
-echo using System.Linq.Expressions;
-echo.
-echo namespace %projectName%.SharedKernel.Repositories
-echo {
-echo     public class QueryParam^<T^>
-echo     {
-echo         public QueryParam^(int pag, int top^)
-echo         {
-echo             Pag = pag;
-echo             Top = top;
-echo             Where = null;
-echo             OrderBy = null;
-echo             OrderByDescending = null;
-echo         }
-echo.
-echo         public int Pag { get; set; }
-echo         public int Top { get; set; }
-echo         public Expression^<Func^<T, bool^>^> Where { get; set; }
-echo         public Func^<T, object^> OrderBy { get; set; }
-echo         public Func^<T, object^> OrderByDescending { get; set; }
-echo     }
-echo }
-) > "..\%projectName%.SharedKernel.Repositories\ParametrosDeQuery.cs"
+mkdir Data
+mkdir Repositories
+mkdir Services
+mkdir Configurations
 
 (
 echo using Microsoft.EntityFrameworkCore;
 echo using Microsoft.Extensions.Configuration;
 echo using System.IO;
 echo.
-echo namespace %projectName%.Infraestructure.Data
+echo namespace %projectName%.Infrastructure.Data
 echo {
 echo     public class ApplicationDbContext : DbContext
 echo     {
@@ -138,34 +103,77 @@ echo.
 echo         // Agregar DbSet^<Entidad^> aquí
 echo     }
 echo }
-) > "..\%projectName%.Infraestructure.Data\ApplicationDbContext.cs"
+) > ".\Data\ApplicationDbContext.cs"
 
-@REM cd %nombreCarpeta%
+mkdir ..\%projectName%.Domain\Entities
+mkdir ..\%projectName%.Domain\Interfaces
+mkdir ..\%projectName%.Domain\ValueObjects
+mkdir ..\%projectName%.Domain\Services
 
-@REM set referencias=%projectName%.UIWeb %projectName%.Application %projectName%.Domain.Entities %projectName%.Service %projectName%.SharedKernel.Repositories %projectName%.Infraestructure.Data
+(
+echo using System.Linq.Expressions;
+echo namespace %projectName%.Domain.Interfaces
+echo {
+echo    public interface IRepository^<T^>
+echo    {
+echo        void Add^(T entidad^);
+echo        void Delete^(int id^);
+echo        void Update^(T entidad^);
+echo        int Count^(Expression^<Func^<T, bool^>^> where^);
+echo        T GetById^(int id^);
+echo        IEnumerable^<T^> FindBy^(QueryParam^<T^> QueryParam^);
+echo    }
+echo }
+) > "..\%projectName%.Domain\Interfaces\IRepository.cs"
 
-@REM for %%r in (%referencias%) do (
-@REM     for %%p in (%referencias%) do (
-@REM         if not "%%r"=="%%p" (
-@REM             dotnet add "%%r" reference "%%p"
-@REM         )
-@REM     )
-@REM )
+(
+echo using System.Linq.Expressions;
+echo.
+echo namespace %projectName%.Domain.Interfaces
+echo {
+echo     public class QueryParam^<T^>
+echo     {
+echo         public QueryParam^(int pag, int top^)
+echo         {
+echo             Pag = pag;
+echo             Top = top;
+echo             Where = null;
+echo             OrderBy = null;
+echo             OrderByDescending = null;
+echo         }
+echo.
+echo         public int Pag { get; set; }
+echo         public int Top { get; set; }
+echo         public Expression^<Func^<T, bool^>^> Where { get; set; }
+echo         public Func^<T, object^> OrderBy { get; set; }
+echo         public Func^<T, object^> OrderByDescending { get; set; }
+echo     }
+echo }
+) > "..\%projectName%.Domain\Interfaces\ParametrosDeQuery.cs"
 
+mkdir ..\%projectName%.Application\Interfaces
+mkdir ..\%projectName%.Application\Services
+mkdir ..\%projectName%.Application\DTOs
+mkdir ..\%projectName%.Application\UseCases
+
+cd ..\..\tests
+
+mkdir %projectName%.Domain.Tests
+mkdir %projectName%.Application.Tests
+mkdir %projectName%.Infrastructure.Tests
+mkdir %projectName%.UIWeb.Tests
 
 echo === Agregando referencias a proyectos ====
 
-dotnet add ..\%projectName%.UIWeb reference ..\%projectName%.Application
-dotnet add ..\%projectName%.UIWeb reference ..\%projectName%.Domain.Entities
-dotnet add ..\%projectName%.UIWeb reference ..\%projectName%.Service
+dotnet add ..\src\%projectName%.UIWeb reference ..\src\%projectName%.Application
+dotnet add ..\src\%projectName%.UIWeb reference ..\src\%projectName%.Domain
+dotnet add ..\src\%projectName%.UIWeb reference ..\src\%projectName%.Infrastructure
 
-dotnet add ..\%projectName%.Application reference ..\%projectName%.Domain.Entities
-dotnet add ..\%projectName%.Application reference ..\%projectName%.Service
-dotnet add ..\%projectName%.Application reference ..\%projectName%.SharedKernel.Repositories
+dotnet add ..\src\%projectName%.Application reference ..\src\%projectName%.Domain
+dotnet add ..\src\%projectName%.Application reference ..\src\%projectName%.Infrastructure
 
-dotnet add ..\%projectName%.SharedKernel.Repositories reference ..\%projectName%.Domain.Entities
-dotnet add ..\%projectName%.SharedKernel.Repositories reference ..\%projectName%.Service
-dotnet add ..\%projectName%.SharedKernel.Repositories reference ..\%projectName%.Infraestructure.Data
+dotnet add ..\src\%projectName%.Infrastructure reference ..\src\%projectName%.Domain
+dotnet add ..\src\%projectName%.Infrastructure reference ..\src\%projectName%.Application
 
 dotnet build
 
