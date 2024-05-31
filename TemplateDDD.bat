@@ -2,9 +2,9 @@
 cls
 color 30
 echo ==================================
-echo = =
-echo = Creación de proyecto DDD =
-echo = =
+echo =                                 =
+echo =     Creación de proyecto DDD    =
+echo =                                 =
 echo ==================================
 echo.
 
@@ -111,50 +111,286 @@ mkdir ..\%projectName%.Domain\ValueObjects
 mkdir ..\%projectName%.Domain\Services
 
 (
-echo using System.Linq.Expressions;
+echo using System;
+echo.
+echo namespace %projectName%.Domain.Entities
+echo {
+echo     public class Sample
+echo     {
+echo         public int Id { get; set; }
+echo         public string? Name { get; set; }
+echo         public DateTime CollectionDate { get; set; }
+echo         public string? Status { get; set; }
+echo     }
+echo }
+) > "..\%projectName%.Domain\Entities\Sample.cs"
+
+(
+echo namespace %projectName%.Domain.ValueObjects
+echo {
+echo    using System;
+echo    using System.Text.RegularExpressions;
+echo.
+echo     public class Email
+echo     {
+echo          public string Address { get; private set; }
+echo.
+echo           public Email^(string address^)
+echo            {
+echo            Address = address;
+echo            }
+echo      }
+echo }
+) > "..\%projectName%.Domain\ValueObjects\Email.cs"
+
+(
+echo using System.Collections.Generic;
+echo using %projectName%.Domain.Entities;
+echo.
 echo namespace %projectName%.Domain.Interfaces
 echo {
-echo    public interface IRepository^<T^>
-echo    {
-echo        void Add^(T entidad^);
-echo        void Delete^(int id^);
-echo        void Update^(T entidad^);
-echo        int Count^(Expression^<Func^<T, bool^>^> where^);
-echo        T GetById^(int id^);
-echo        IEnumerable^<T^> FindBy^(QueryParam^<T^> QueryParam^);
-echo    }
+echo     public interface ISampleRepository
+echo     {
+echo         Sample GetById^(int id^);
+echo         IEnumerable^<Sample^> GetAll^(^);
+echo         void Add^(Sample sample^);
+echo         void Update^(Sample sample^);
+echo         void Delete^(int id^);
+echo     }
 echo }
-) > "..\%projectName%.Domain\Interfaces\IRepository.cs"
+) > "..\%projectName%.Domain\Interfaces\ISampleRepository.cs"
 
 (
 echo using System.Linq.Expressions;
+echo using %projectName%.Domain.Entities;
+echo using %projectName%.Domain.Interfaces;
 echo.
-echo namespace %projectName%.Domain.Interfaces
+echo namespace %projectName%.Domain.Services
 echo {
-echo     public class QueryParam^<T^>
+echo     public class SampleService
 echo     {
-echo         public QueryParam^(int pag, int top^)
+echo         private readonly ISampleRepository _sampleRepository;
+echo.
+echo         public SampleService^(ISampleRepository sampleRepository^)
 echo         {
-echo             Pag = pag;
-echo             Top = top;
-echo             Where = null;
-echo             OrderBy = null;
-echo             OrderByDescending = null;
+echo             _sampleRepository = sampleRepository;
 echo         }
 echo.
-echo         public int Pag { get; set; }
-echo         public int Top { get; set; }
-echo         public Expression^<Func^<T, bool^>^> Where { get; set; }
-echo         public Func^<T, object^> OrderBy { get; set; }
-echo         public Func^<T, object^> OrderByDescending { get; set; }
+echo         public Sample GetSample^(int id^)
+echo         {
+echo             return _sampleRepository.GetById^(id^);
+echo         }
+echo.
+echo         public void CreateSample^(Sample sample^)
+echo         {
+echo             // Add business logic here
+echo             _sampleRepository.Add^(sample^);
+echo         }
 echo     }
 echo }
-) > "..\%projectName%.Domain\Interfaces\ParametrosDeQuery.cs"
+) > "..\%projectName%.Domain\Services\SampleService.cs"
 
 mkdir ..\%projectName%.Application\Interfaces
 mkdir ..\%projectName%.Application\Services
 mkdir ..\%projectName%.Application\DTOs
 mkdir ..\%projectName%.Application\UseCases
+
+(
+echo namespace %projectName%.Application.DTOs
+echo {
+echo     public class SampleDto
+echo     {
+echo         public int Id { get; set; }
+echo         public string? Name { get; set; }
+echo         public DateTime CollectionDate { get; set; }
+echo         public string? Status { get; set; }
+echo     }
+echo }
+) > "..\%projectName%.Application\DTOs\SampleDto.cs"
+
+(
+echo using System.Collections.Generic;
+echo using %projectName%.Application.DTOs;
+echo.
+echo namespace %projectName%.Application.Interfaces
+echo {
+echo     public interface ISampleService
+echo     {
+echo         SampleDto GetSample^(int id^);
+echo         IEnumerable^<SampleDto^> GetAllSamples^(^);
+echo         void CreateSample^(SampleDto sampleDto^);
+echo         void UpdateSample^(SampleDto sampleDto^);
+echo         void DeleteSample^(int id^);
+echo     }
+echo }
+) > "..\%projectName%.Application\Interfaces\ISampleService.cs"
+
+(
+echo using System.Collections.Generic;
+echo using %projectName%.Application.DTOs;
+echo using %projectName%.Application.Interfaces;
+echo using %projectName%.Domain.Entities;
+echo using %projectName%.Domain.Interfaces;
+echo.
+echo namespace %projectName%.Application.Services
+echo {
+echo     public class SampleAppService : ISampleService
+echo     {
+echo         private readonly ISampleRepository _sampleRepository;
+echo.
+echo         public SampleAppService^(ISampleRepository sampleRepository^)
+echo         {
+echo             _sampleRepository = sampleRepository;
+echo         }
+echo.
+echo         public SampleDto GetSample^(int id^)
+echo         {
+echo             var sample = _sampleRepository.GetById^(id^);
+echo             return new SampleDto
+echo             {
+echo                 Id = sample.Id,
+echo                 Name = sample.Name,
+echo                 CollectionDate = sample.CollectionDate,
+echo                 Status = sample.Status
+echo             };
+echo         }
+echo.
+echo         public IEnumerable^<SampleDto^> GetAllSamples^(^)
+echo         {
+echo             var samples = _sampleRepository.GetAll^(^);
+echo             var sampleDtos = new List^<SampleDto^>^(^);
+echo.
+echo             foreach ^(var sample in samples^)
+echo             {
+echo                 sampleDtos.Add^(new SampleDto^(^)
+echo                 {
+echo                     Id = sample.Id,
+echo                     Name = sample.Name,
+echo                     CollectionDate = sample.CollectionDate,
+echo                     Status = sample.Status
+echo                 }^);
+echo             }
+echo.
+echo             return sampleDtos;
+echo         }
+echo.
+echo         public void CreateSample^(SampleDto sampleDto^)
+echo         {
+echo             var sample = new Sample
+echo             {
+echo                 Id = sampleDto.Id,
+echo                 Name = sampleDto.Name,
+echo                 CollectionDate = sampleDto.CollectionDate,
+echo                 Status = sampleDto.Status
+echo             };
+echo.
+echo             _sampleRepository.Add^(sample^);
+echo         }
+echo.
+echo         public void UpdateSample^(SampleDto sampleDto^)
+echo         {
+echo             var sample = new Sample
+echo             {
+echo                 Id = sampleDto.Id,
+echo                 Name = sampleDto.Name,
+echo                 CollectionDate = sampleDto.CollectionDate,
+echo                 Status = sampleDto.Status
+echo             };
+echo.
+echo             _sampleRepository.Update^(sample^);
+echo         }
+echo.
+echo         public void DeleteSample^(int id^)
+echo         {
+echo             _sampleRepository.Delete^(id^);
+echo         }
+echo     }
+echo }
+) > "..\%projectName%.Application\Services\SampleAppService.cs"
+
+(
+echo using Microsoft.AspNetCore.Mvc;
+echo using %projectName%.Application.Interfaces;
+echo using %projectName%.Application.DTOs;
+echo.
+echo namespace %projectName%.UIWeb.Controllers
+echo {
+echo     public class SampleController : Controller
+echo     {
+echo         private readonly ISampleService _sampleService;
+echo.
+echo         public SampleController^(ISampleService sampleService^)
+echo         {
+echo             _sampleService = sampleService;
+echo         }
+echo.
+echo         public IActionResult Index^(^)
+echo         {
+echo             var samples = _sampleService.GetAllSamples^(^);
+echo             return View^(samples^);
+echo         }
+echo.
+echo         public IActionResult Details^(int id^)
+echo         {
+echo             var sample = _sampleService.GetSample^(id^);
+echo             if ^(sample == null^)
+echo             {
+echo                 return NotFound^(^);
+echo             }
+echo             return View^(sample^);
+echo         }
+echo.
+echo         public IActionResult Create^(^)
+echo         {
+echo             return View^(^);
+echo         }
+echo.
+echo         [HttpPost]
+echo         [ValidateAntiForgeryToken]
+echo         public IActionResult Create^(SampleDto sampleDto^)
+echo         {
+echo             if ^(ModelState.IsValid^)
+echo             {
+echo                 _sampleService.CreateSample^(sampleDto^);
+echo                 return RedirectToAction^(nameof^(Index^)^);
+echo             }
+echo             return View^(sampleDto^);
+echo         }
+echo     }
+echo }
+) > "..\%projectName%.UIWeb\Controllers\SampleController.cs"
+
+(
+echo @model IEnumerable^<%projectName%.Application.DTOs.SampleDto^>
+echo.
+echo ^<h1^>Samples^</h1^>
+echo.
+echo ^<table class="table"^>
+echo     ^<thead^>
+echo         ^<tr^>
+echo             ^<th^>Id^</th^>
+echo             ^<th^>Name^</th^>
+echo             ^<th^>Collection Date^</th^>
+echo             ^<th^>Status^</th^>
+echo             ^<th^>Actions^</th^>
+echo         ^</tr^>
+echo     ^</thead^>
+echo     ^<tbody^>
+echo         @foreach ^(var sample in Model^)
+echo         {
+echo             ^<tr^>
+echo                 ^<td^>@sample.Id^</td^>
+echo                 ^<td^>@sample.Name^</td^>
+echo                 ^<td^>@sample.CollectionDate^</td^>
+echo                 ^<td^>@sample.Status^</td^>
+echo                 ^<td^>
+echo                     ^<a href="@Url.Action("Details", new { id = sample.Id })"^>Details^</a^>
+echo                 ^</td^>
+echo             ^</tr^>
+echo         }
+echo     ^</tbody^>
+echo ^</table^>
+) > "..\%projectName%.UIWeb\Views\Sample.cshtml"
 
 cd ..\..\tests
 
@@ -162,6 +398,33 @@ mkdir %projectName%.Domain.Tests
 mkdir %projectName%.Application.Tests
 mkdir %projectName%.Infrastructure.Tests
 mkdir %projectName%.UIWeb.Tests
+
+(
+echo using Xunit;
+echo using %projectName%.Domain.Entities;
+echo.
+echo namespace %projectName%.Domain.Tests
+echo {
+echo     public class SampleTests
+echo     {
+echo         [Fact]
+echo         public void CanCreateSample^(^)
+echo         {
+echo             var sample = new Sample
+echo             {
+echo                 Id = 1,
+echo                 Name = "Blood Sample",
+echo                 CollectionDate = DateTime.Now,
+echo                 Status = "Collected"
+echo             };
+echo.
+echo             Assert.Equal^(1, sample.Id^);
+echo             Assert.Equal^("Blood Sample", sample.Name^);
+echo             Assert.Equal^("Collected", sample.Status^);
+echo         }
+echo     }
+echo }
+) > ".\%projectName%.Domain.Tests\SampleTests.cs"
 
 echo === Agregando referencias a proyectos ====
 
@@ -173,9 +436,11 @@ dotnet add ..\src\%projectName%.Application reference ..\src\%projectName%.Domai
 dotnet add ..\src\%projectName%.Application reference ..\src\%projectName%.Infrastructure
 
 dotnet add ..\src\%projectName%.Infrastructure reference ..\src\%projectName%.Domain
-dotnet add ..\src\%projectName%.Infrastructure reference ..\src\%projectName%.Application
 
-dotnet build
+
+cd ..\src\
+
+dotnet build 
 
 echo Proceso completado exitosamente.
 pause
