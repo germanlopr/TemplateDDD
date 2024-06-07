@@ -66,6 +66,7 @@ echo   ^</ItemGroup^>
 echo ^</Project^>
 ) > "%projectName%.Infrastructure.csproj"
 
+
 dotnet restore
 
 mkdir Data
@@ -394,37 +395,19 @@ echo ^</table^>
 
 cd ..\..\tests
 
-mkdir %projectName%.Domain.Tests
-mkdir %projectName%.Application.Tests
-mkdir %projectName%.Infrastructure.Tests
-mkdir %projectName%.UIWeb.Tests
+:: Configure test projects
+set testProjects=Domain.Tests Application.Tests Infrastructure.Tests UIWeb.Tests
 
-(
-echo using Xunit;
-echo using %projectName%.Domain.Entities;
-echo.
-echo namespace %projectName%.Domain.Tests
-echo {
-echo     public class SampleTests
-echo     {
-echo         [Fact]
-echo         public void CanCreateSample^(^)
-echo         {
-echo             var sample = new Sample
-echo             {
-echo                 Id = 1,
-echo                 Name = "Blood Sample",
-echo                 CollectionDate = DateTime.Now,
-echo                 Status = "Collected"
-echo             };
-echo.
-echo             Assert.Equal^(1, sample.Id^);
-echo             Assert.Equal^("Blood Sample", sample.Name^);
-echo             Assert.Equal^("Collected", sample.Status^);
-echo         }
-echo     }
-echo }
-) > ".\%projectName%.Domain.Tests\SampleTests.cs"
+
+for %%t in (%testProjects%) do (
+    dotnet new xunit -o "%projectName%.%%t"
+    echo %projectDirectory%\src\%projectName%.sln
+    dotnet sln "%projectDirectory%\src\%projectName%.sln" add "%projectDirectory%\tests\%projectName%.%%t"
+    echo %projectDirectory%\tests\%%t
+)
+
+::end test
+
 
 echo === Agregando referencias a proyectos ====
 
