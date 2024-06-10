@@ -1,119 +1,59 @@
 @echo off
-cls
-color 30
-echo ==================================
-echo =                                 =
-echo =     Creación de proyecto DDD    =
-echo =                                 =
-echo ==================================
-echo.
+set projectName=MyProject
 
-set /p projectName="Ingrese el nombre del proyecto: "
-set projectDirectory=%cd%\%projectName%
-
-if exist "%projectDirectory%" (
-    echo El directorio "%projectDirectory%" ya existe. Saliendo del script.
-    pause
-    exit
-)
-
-mkdir "%projectDirectory%"
-mkdir "%projectDirectory%\src"
-mkdir "%projectDirectory%\tests"
-
-cd "%projectDirectory%\src"
-
-dotnet new sln --name %projectName%
-
-set projects=Domain Application Infrastructure
-
-for %%p in (%projects%) do (
-    dotnet new classlib -o "%projectName%.%%p"
-    dotnet sln add "%projectName%.%%p"
-)
-
-echo Ingrese el tipo de UI:
-echo 1. MVC
-echo 2. Blazor
-set /p uiType="Ingrese su elección (1 o 2): "
-
-if "%uiType%" == "1" (
-    dotnet new mvc -o "%projectName%.UIWeb"
-    dotnet sln add "%projectName%.UIWeb"
-) else if "%uiType%" == "2" (
-    dotnet new blazorserver -o "%projectName%.UIWeb"
-    dotnet sln add "%projectName%.UIWeb"
-) else (
-    echo Opción no válida. Se utilizará MVC como opción predeterminada.
-    dotnet new mvc -o "%projectName%.UIWeb"
-    dotnet sln add "%projectName%.UIWeb"
-)
-
-dotnet build
-
-cd "%projectDirectory%\src\%projectName%.Infrastructure"
-
-(
-echo ^<Project Sdk="Microsoft.NET.Sdk"^>
-echo   ^<PropertyGroup^>
-echo     ^<TargetFramework^>net7.0^</TargetFramework^>
-echo   ^</PropertyGroup^>
-echo   ^<ItemGroup^>
-echo     ^<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="7.0.0" /^>
-echo     ^<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="7.0.0" /^>
-echo     ^<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="7.0.0" /^>
-echo   ^</ItemGroup^>
-echo ^</Project^>
-) > "%projectName%.Infrastructure.csproj"
-
-
-dotnet restore
-
-mkdir Data
-mkdir Repositories
-mkdir Services
-mkdir Configurations
-
-(
-echo using Microsoft.EntityFrameworkCore;
-echo using Microsoft.Extensions.Configuration;
-echo using System.IO;
-echo.
-echo namespace %projectName%.Infrastructure.Data
-echo {
-echo     public class ApplicationDbContext : DbContext
-echo     {
-echo         public ApplicationDbContext^(DbContextOptions^<ApplicationDbContext^> options^)
-echo             : base^(options^)
-echo         {
-echo         }
-echo.
-echo         protected override void OnConfiguring^(DbContextOptionsBuilder optionsBuilder^)
-echo         {
-echo             if ^(!optionsBuilder.IsConfigured^)
-echo             {
-echo                 IConfigurationRoot configuration = new ConfigurationBuilder^(^)
-echo                     .SetBasePath^(Directory.GetCurrentDirectory^(^)^)
-echo                     .AddJsonFile^("appsettings.json"^)
-echo                     .Build^(^);
-echo                 var connectionString = configuration.GetConnectionString^("DefaultConnection"^);
-echo                 optionsBuilder.UseSqlServer^(connectionString^);
-echo             }
-echo         }
-echo.
-echo         // Agregar DbSet^<Entidad^> aquí
-echo     }
-echo }
-) > ".\Data\ApplicationDbContext.cs"
-
+:: Crear estructura de carpetas
 mkdir ..\%projectName%.Domain\Entities
 mkdir ..\%projectName%.Domain\Interfaces
 mkdir ..\%projectName%.Domain\ValueObjects
 mkdir ..\%projectName%.Domain\Services
+mkdir ..\%projectName%.Infrastructure\Data
+mkdir ..\%projectName%.Application\Services
+mkdir ..\%projectName%.UIWeb
 
+:: Crear DbContext
+(
+echo using Microsoft.EntityFrameworkCore;
+echo namespace %projectName%.Infrastructure.Data
+echo {
+echo     public class ApplicationDbContext : DbContext
+echo     {
+echo         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+echo             : base(options)
+echo         {
+echo         }
+echo
+echo         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+echo         {
+echo             if (!optionsBuilder.IsConfigured)
+echo             {
+echo                 IConfigurationRoot configuration = new ConfigurationBuilder()
+echo                     .SetBasePath(Directory.GetCurrentDirectory())
+echo                     .AddJsonFile("appsettings.json")
+echo                     .Build();
+echo                 var connectionString = configuration.GetConnectionString("DefaultConnection");
+echo                 optionsBuilder.UseSqlServer(connectionString);
+echo             }
+echo         }
+echo
+echo         // Agregar DbSet<Entidad> aquí
+echo     }
+echo }
+) > ".\\src\\%projectName%.Infrastructure\\Data\\ApplicationDbContext.cs"
+
+:: Crear ApplicationUser
+(
+echo using Microsoft.AspNetCore.Identity;
+echo namespace %projectName%.Infrastructure.Data
+echo {
+echo     public class ApplicationUser : IdentityUser
+echo     {
+echo     }
+echo }
+) > ".\\src\\%projectName%.Infrastructure\\Data\\ApplicationUser.cs"
+
+:: Crear una entidad de ejemplo
 (
 echo using System;
-echo.
 echo namespace %projectName%.Domain.Entities
 echo {
 echo     public class Sample
@@ -124,306 +64,233 @@ echo         public DateTime CollectionDate { get; set; }
 echo         public string? Status { get; set; }
 echo     }
 echo }
-) > "..\%projectName%.Domain\Entities\Sample.cs"
+) > "..\\%projectName%.Domain\\Entities\\Sample.cs"
 
+:: Crear un ValueObject de ejemplo
 (
 echo namespace %projectName%.Domain.ValueObjects
 echo {
-echo    using System;
-echo    using System.Text.RegularExpressions;
-echo.
+echo     using System;
+echo     using System.Text.RegularExpressions;
+echo
 echo     public class Email
 echo     {
-echo          public string Address { get; private set; }
-echo.
-echo           public Email^(string address^)
-echo            {
-echo            Address = address;
-echo            }
-echo      }
+echo         public string Address { get; private set; }
+echo
+echo         public Email(string address)
+echo         {
+echo             Address = address;
+echo         }
+echo     }
 echo }
-) > "..\%projectName%.Domain\ValueObjects\Email.cs"
+) > "..\\%projectName%.Domain\\ValueObjects\\Email.cs"
 
+:: Crear una interfaz de repositorio de ejemplo
 (
 echo using System.Collections.Generic;
 echo using %projectName%.Domain.Entities;
-echo.
+echo
 echo namespace %projectName%.Domain.Interfaces
 echo {
 echo     public interface ISampleRepository
 echo     {
-echo         Sample GetById^(int id^);
-echo         IEnumerable^<Sample^> GetAll^(^);
-echo         void Add^(Sample sample^);
-echo         void Update^(Sample sample^);
-echo         void Delete^(int id^);
+echo         Sample GetById(int id);
+echo         IEnumerable<Sample> GetAll();
+echo         void Add(Sample sample);
+echo         void Update(Sample sample);
+echo         void Delete(int id);
 echo     }
 echo }
-) > "..\%projectName%.Domain\Interfaces\ISampleRepository.cs"
+) > "..\\%projectName%.Domain\\Interfaces\\ISampleRepository.cs"
 
+:: Crear un servicio de ejemplo
 (
-echo using System.Linq.Expressions;
 echo using %projectName%.Domain.Entities;
 echo using %projectName%.Domain.Interfaces;
-echo.
-echo namespace %projectName%.Domain.Services
+echo
+echo namespace %projectName%.Application.Services
 echo {
 echo     public class SampleService
 echo     {
 echo         private readonly ISampleRepository _sampleRepository;
-echo.
-echo         public SampleService^(ISampleRepository sampleRepository^)
+echo
+echo         public SampleService(ISampleRepository sampleRepository)
 echo         {
 echo             _sampleRepository = sampleRepository;
 echo         }
-echo.
-echo         public Sample GetSample^(int id^)
+echo
+echo         public Sample GetSampleById(int id)
 echo         {
-echo             return _sampleRepository.GetById^(id^);
-echo         }
-echo.
-echo         public void CreateSample^(Sample sample^)
-echo         {
-echo             // Add business logic here
-echo             _sampleRepository.Add^(sample^);
+echo             return _sampleRepository.GetById(id);
 echo         }
 echo     }
 echo }
-) > "..\%projectName%.Domain\Services\SampleService.cs"
+) > "..\\%projectName%.Application\\Services\\SampleService.cs"
 
-mkdir ..\%projectName%.Application\Interfaces
-mkdir ..\%projectName%.Application\Services
-mkdir ..\%projectName%.Application\DTOs
-mkdir ..\%projectName%.Application\UseCases
-
+:: Agregar configuraciones de Identity y JWT en Startup.cs
 (
-echo namespace %projectName%.Application.DTOs
+echo using Microsoft.AspNetCore.Authentication.JwtBearer;
+echo using Microsoft.AspNetCore.Builder;
+echo using Microsoft.AspNetCore.Hosting;
+echo using Microsoft.AspNetCore.Identity;
+echo using Microsoft.Extensions.Configuration;
+echo using Microsoft.Extensions.DependencyInjection;
+echo using Microsoft.Extensions.Hosting;
+echo using Microsoft.IdentityModel.Tokens;
+echo using Serilog;
+echo using %projectName%.Infrastructure.Data;
+echo using System.Text;
+echo
+echo namespace %projectName%.UIWeb
 echo {
-echo     public class SampleDto
+echo     public class Startup
 echo     {
-echo         public int Id { get; set; }
-echo         public string? Name { get; set; }
-echo         public DateTime CollectionDate { get; set; }
-echo         public string? Status { get; set; }
-echo     }
-echo }
-) > "..\%projectName%.Application\DTOs\SampleDto.cs"
-
-(
-echo using System.Collections.Generic;
-echo using %projectName%.Application.DTOs;
-echo.
-echo namespace %projectName%.Application.Interfaces
-echo {
-echo     public interface ISampleService
-echo     {
-echo         SampleDto GetSample^(int id^);
-echo         IEnumerable^<SampleDto^> GetAllSamples^(^);
-echo         void CreateSample^(SampleDto sampleDto^);
-echo         void UpdateSample^(SampleDto sampleDto^);
-echo         void DeleteSample^(int id^);
-echo     }
-echo }
-) > "..\%projectName%.Application\Interfaces\ISampleService.cs"
-
-(
-echo using System.Collections.Generic;
-echo using %projectName%.Application.DTOs;
-echo using %projectName%.Application.Interfaces;
-echo using %projectName%.Domain.Entities;
-echo using %projectName%.Domain.Interfaces;
-echo.
-echo namespace %projectName%.Application.Services
-echo {
-echo     public class SampleAppService : ISampleService
-echo     {
-echo         private readonly ISampleRepository _sampleRepository;
-echo.
-echo         public SampleAppService^(ISampleRepository sampleRepository^)
+echo         public Startup(IConfiguration configuration)
 echo         {
-echo             _sampleRepository = sampleRepository;
+echo             Configuration = configuration;
 echo         }
-echo.
-echo         public SampleDto GetSample^(int id^)
+echo
+echo         public IConfiguration Configuration { get; }
+echo
+echo         public void ConfigureServices(IServiceCollection services)
 echo         {
-echo             var sample = _sampleRepository.GetById^(id^);
-echo             return new SampleDto
+echo             services.AddDbContext<ApplicationDbContext>(options =>
+echo                 options.UseSqlServer(
+echo                     Configuration.GetConnectionString("DefaultConnection")));
+echo             services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
+echo                 .AddEntityFrameworkStores<ApplicationDbContext>();
+echo
+echo             services.AddAuthentication(options =>
 echo             {
-echo                 Id = sample.Id,
-echo                 Name = sample.Name,
-echo                 CollectionDate = sample.CollectionDate,
-echo                 Status = sample.Status
-echo             };
-echo         }
-echo.
-echo         public IEnumerable^<SampleDto^> GetAllSamples^(^)
-echo         {
-echo             var samples = _sampleRepository.GetAll^(^);
-echo             var sampleDtos = new List^<SampleDto^>^(^);
-echo.
-echo             foreach ^(var sample in samples^)
+echo                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+echo                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+echo             })
+echo             .AddJwtBearer(options =>
 echo             {
-echo                 sampleDtos.Add^(new SampleDto^(^)
+echo                 options.TokenValidationParameters = new TokenValidationParameters
 echo                 {
-echo                     Id = sample.Id,
-echo                     Name = sample.Name,
-echo                     CollectionDate = sample.CollectionDate,
-echo                     Status = sample.Status
-echo                 }^);
+echo                     ValidateIssuer = true,
+echo                     ValidateAudience = true,
+echo                     ValidateLifetime = true,
+echo                     ValidateIssuerSigningKey = true,
+echo                     ValidIssuer = Configuration["Jwt:Issuer"],
+echo                     ValidAudience = Configuration["Jwt:Audience"],
+echo                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["Jwt:Key"]))
+echo                 };
+echo             });
+echo
+echo             services.AddControllersWithViews();
+echo         }
+echo
+echo         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+echo         {
+echo             if (env.IsDevelopment())
+echo             {
+echo                 app.UseDeveloperExceptionPage();
+echo                 app.UseSwagger();
+echo                 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API v1"));
 echo             }
-echo.
-echo             return sampleDtos;
-echo         }
-echo.
-echo         public void CreateSample^(SampleDto sampleDto^)
-echo         {
-echo             var sample = new Sample
+echo             else
 echo             {
-echo                 Id = sampleDto.Id,
-echo                 Name = sampleDto.Name,
-echo                 CollectionDate = sampleDto.CollectionDate,
-echo                 Status = sampleDto.Status
-echo             };
-echo.
-echo             _sampleRepository.Add^(sample^);
-echo         }
-echo.
-echo         public void UpdateSample^(SampleDto sampleDto^)
-echo         {
-echo             var sample = new Sample
+echo                 app.UseExceptionHandler("/Home/Error");
+echo                 app.UseHsts();
+echo             }
+echo
+echo             app.UseGlobalExceptionHandler(); // Añade esta línea
+echo             app.UseSerilogRequestLogging(); // Añade esta línea
+echo
+echo             app.UseRouting();
+echo             app.UseAuthentication();
+echo             app.UseAuthorization();
+echo
+echo             app.UseEndpoints(endpoints =>
 echo             {
-echo                 Id = sampleDto.Id,
-echo                 Name = sampleDto.Name,
-echo                 CollectionDate = sampleDto.CollectionDate,
-echo                 Status = sampleDto.Status
-echo             };
-echo.
-echo             _sampleRepository.Update^(sample^);
-echo         }
-echo.
-echo         public void DeleteSample^(int id^)
-echo         {
-echo             _sampleRepository.Delete^(id^);
+echo                 endpoints.MapControllers();
+echo             });
+echo
+echo             Log.Logger = new LoggerConfiguration()
+echo                 .MinimumLevel.Debug()
+echo                 .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+echo                 .Enrich.FromLogContext()
+echo                 .WriteTo.Console()
+echo                 .CreateLogger();
 echo         }
 echo     }
 echo }
-) > "..\%projectName%.Application\Services\SampleAppService.cs"
+) > ".\\src\\%projectName%.UIWeb\\Startup.cs"
 
+:: Crear GlobalExceptionHandlerMiddleware
 (
-echo using Microsoft.AspNetCore.Mvc;
-echo using %projectName%.Application.Interfaces;
-echo using %projectName%.Application.DTOs;
-echo.
-echo namespace %projectName%.UIWeb.Controllers
+echo using Microsoft.AspNetCore.Http;
+echo using Serilog;
+echo using System;
+echo using System.Net;
+echo using System.Threading.Tasks;
+echo namespace %projectName%.UIWeb
 echo {
-echo     public class SampleController : Controller
+echo     public class GlobalExceptionHandlerMiddleware
 echo     {
-echo         private readonly ISampleService _sampleService;
-echo.
-echo         public SampleController^(ISampleService sampleService^)
+echo         private readonly RequestDelegate _next;
+echo         public GlobalExceptionHandlerMiddleware(RequestDelegate next)
 echo         {
-echo             _sampleService = sampleService;
+echo             _next = next;
 echo         }
-echo.
-echo         public IActionResult Index^(^)
+echo
+echo         public async Task InvokeAsync(HttpContext context)
 echo         {
-echo             var samples = _sampleService.GetAllSamples^(^);
-echo             return View^(samples^);
-echo         }
-echo.
-echo         public IActionResult Details^(int id^)
-echo         {
-echo             var sample = _sampleService.GetSample^(id^);
-echo             if ^(sample == null^)
+echo             try
 echo             {
-echo                 return NotFound^(^);
+echo                 await _next(context);
 echo             }
-echo             return View^(sample^);
-echo         }
-echo.
-echo         public IActionResult Create^(^)
-echo         {
-echo             return View^(^);
-echo         }
-echo.
-echo         [HttpPost]
-echo         [ValidateAntiForgeryToken]
-echo         public IActionResult Create^(SampleDto sampleDto^)
-echo         {
-echo             if ^(ModelState.IsValid^)
+echo             catch (Exception ex)
 echo             {
-echo                 _sampleService.CreateSample^(sampleDto^);
-echo                 return RedirectToAction^(nameof^(Index^)^);
+echo                 Log.Error($"Something went wrong: {ex}");
+echo                 await HandleExceptionAsync(context, ex);
 echo             }
-echo             return View^(sampleDto^);
+echo         }
+echo
+echo         private Task HandleExceptionAsync(HttpContext context, Exception exception)
+echo         {
+echo             context.Response.ContentType = "application/json";
+echo             context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+echo             return context.Response.WriteAsync(new ErrorDetails()
+echo             {
+echo                 StatusCode = context.Response.StatusCode,
+echo                 Message = "Internal Server Error from the custom middleware."
+echo             }.ToString());
+echo         }
+echo     }
+echo
+echo     public class ErrorDetails
+echo     {
+echo         public int StatusCode { get; set; }
+echo         public string Message { get; set; }
+echo         public override string ToString()
+echo         {
+echo             return Newtonsoft.Json.JsonConvert.SerializeObject(this);
 echo         }
 echo     }
 echo }
-) > "..\%projectName%.UIWeb\Controllers\SampleController.cs"
+) > ".\\src\\%projectName%.UIWeb\\GlobalExceptionHandlerMiddleware.cs"
 
-(
-echo @model IEnumerable^<%projectName%.Application.DTOs.SampleDto^>
-echo.
-echo ^<h1^>Samples^</h1^>
-echo.
-echo ^<table class="table"^>
-echo     ^<thead^>
-echo         ^<tr^>
-echo             ^<th^>Id^</th^>
-echo             ^<th^>Name^</th^>
-echo             ^<th^>Collection Date^</th^>
-echo             ^<th^>Status^</th^>
-echo             ^<th^>Actions^</th^>
-echo         ^</tr^>
-echo     ^</thead^>
-echo     ^<tbody^>
-echo         @foreach ^(var sample in Model^)
-echo         {
-echo             ^<tr^>
-echo                 ^<td^>@sample.Id^</td^>
-echo                 ^<td^>@sample.Name^</td^>
-echo                 ^<td^>@sample.CollectionDate^</td^>
-echo                 ^<td^>@sample.Status^</td^>
-echo                 ^<td^>
-echo                     ^<a href="@Url.Action("Details", new { id = sample.Id })"^>Details^</a^>
-echo                 ^</td^>
-echo             ^</tr^>
-echo         }
-echo     ^</tbody^>
-echo ^</table^>
-) > "..\%projectName%.UIWeb\Views\Sample.cshtml"
+:: Agregar paquetes necesarios
+dotnet add package Microsoft.AspNetCore.Authentication.JwtBearer
+dotnet add package Microsoft.AspNetCore.Identity.EntityFrameworkCore
+dotnet add package Serilog.AspNetCore
+dotnet add package Serilog.Sinks.Console
+dotnet add package Serilog.Extensions.Logging
 
-cd ..\..\tests
-
-:: Configure test projects
-set testProjects=Domain.Tests Application.Tests Infrastructure.Tests UIWeb.Tests
-
-
-for %%t in (%testProjects%) do (
-    dotnet new xunit -o "%projectName%.%%t"
-    echo %projectDirectory%\src\%projectName%.sln
-    dotnet sln "%projectDirectory%\src\%projectName%.sln" add "%projectDirectory%\tests\%projectName%.%%t"
-    echo %projectDirectory%\tests\%%t
-)
-
-::end test
-
-
-echo === Agregando referencias a proyectos ====
-
+:: Agregar referencias a proyectos
 dotnet add ..\src\%projectName%.UIWeb reference ..\src\%projectName%.Application
 dotnet add ..\src\%projectName%.UIWeb reference ..\src\%projectName%.Domain
 dotnet add ..\src\%projectName%.UIWeb reference ..\src\%projectName%.Infrastructure
-
 dotnet add ..\src\%projectName%.Application reference ..\src\%projectName%.Domain
 dotnet add ..\src\%projectName%.Application reference ..\src\%projectName%.Infrastructure
-
 dotnet add ..\src\%projectName%.Infrastructure reference ..\src\%projectName%.Domain
-
 
 cd ..\src\
 
-dotnet build 
+dotnet build
 
 echo Proceso completado exitosamente.
 pause
