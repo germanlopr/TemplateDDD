@@ -39,8 +39,13 @@ src/
 │   ├── Persistence/
 
 │   └── Services/
+
 │
+
 └── Web/
+
     ├── Controllers/
+
     ├── Middleware/
+    
     └── Views/
