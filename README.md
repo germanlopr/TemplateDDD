@@ -5,22 +5,39 @@ The code snippet automates the creation of a Domain-Driven Design (DDD) project 
 
 src/
 ├── Domain/
+
 │   ├── Entities/
+
 │   ├── ValueObjects/
+
 │   ├── Repositories/
+
 │   ├── Services/
+
 │   └── Exceptions/         // Excepciones específicas del dominio
+
 │
+
 ├── Application/
+
 │   ├── Services/
+
 │   ├── Interfaces/
+
 │   ├── Dtos/
+
 │   └── Exceptions/         // Manejo de excepciones a nivel de aplicación
+
 │
+
 ├── Infrastructure/
+
 │   ├── Authentication/     // Implementación de JWT
+
 │   ├── Logging/            // Configuración y manejo de Serilog
+
 │   ├── Persistence/
+
 │   └── Services/
 │
 └── Web/
